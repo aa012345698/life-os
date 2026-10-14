@@ -18,16 +18,21 @@ export default function RootLayout() {
       try {
         const apiKey = process.env.EXPO_PUBLIC_API_KEY || '';
         await initialize(apiKey);
+        // 延迟隐藏 splash，确保 UI 有时间准备
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         console.error('初始化失败:', error);
       } finally {
-        // 隐藏 splash 屏幕
-        await SplashScreen.hideAsync();
+        try {
+          await SplashScreen.hideAsync();
+        } catch (e) {
+          // 忽略 splash 隐藏错误
+        }
       }
     }
 
     initializeApp();
-  }, []);
+  }, [initialize]);
 
   if (isLoading || !vault) {
     return (
@@ -37,7 +42,7 @@ export default function RootLayout() {
           animationEnabled: false,
         }}
       >
-        <Stack.Screen name="loading" />
+        <Stack.Screen name="loading" options={{ headerShown: false }} />
       </Stack>
     );
   }
@@ -48,7 +53,7 @@ export default function RootLayout() {
         headerShown: false,
       }}
     >
-      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
   );
 }

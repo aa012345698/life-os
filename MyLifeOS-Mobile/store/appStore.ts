@@ -111,12 +111,27 @@ export const useAppStore = create<AppState>((set, get) => ({
       // 初始计算 KPI
       syncEngine.recomputeAllKPIs();
 
+      // 为每个模块创建初始记录（如果没有的话）
+      const allModules = modules.getModules();
+      allModules.forEach((module) => {
+        const records = vault.getModuleData(module.id);
+        if (records.length === 0) {
+          // 创建空记录供用户填写
+          const initialData: Record<string, any> = {};
+          module.fields.forEach((field) => {
+            initialData[field.fieldId] = '';
+          });
+          const recordId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          vault.setModuleRecord(module.id, recordId, initialData, 'manual');
+        }
+      });
+
       set({
         vault,
         modules,
         syncEngine,
         aiAgent,
-        currentModuleId: modules.getModules()[0]?.id || null,
+        currentModuleId: allModules[0]?.id || null,
         systemStatus: {
           online: true,
           lastSync: new Date().toISOString(),
@@ -126,10 +141,26 @@ export const useAppStore = create<AppState>((set, get) => ({
         isLoading: false,
       });
     } catch (error: any) {
+      console.error('初始化错误:', error);
       set({
-        error: error.message,
+        error: error?.message || '初始化失败，请重试',
         isLoading: false,
       });
+      // 即使初始化失败，也尝试设置基本状态
+      setTimeout(() => {
+        set((state) => {
+          if (!state.vault) {
+            return {
+              vault: null,
+              modules: null,
+              syncEngine: null,
+              aiAgent: null,
+              isLoading: false,
+            };
+          }
+          return state;
+        });
+      }, 2000);
     }
   },
 
